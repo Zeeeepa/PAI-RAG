@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 
 # To Do: remove vector db config
@@ -42,3 +42,26 @@ class RagResponse(BaseModel):
     session_id: str | None = None
     docs: List[ContextDoc] | None = None
     new_query: str | None = None
+
+
+class ChatMessage(BaseModel):
+    content: str
+    role: str
+
+
+class ChatCompletionRequest(BaseModel):
+    model: str
+    messages: List[ChatMessage]
+    max_tokens: Optional[int] = 1024
+    temperature: Optional[float] = 0.1
+    stream: Optional[bool] = False
+    session_id: str | None = None
+    with_history: Optional[bool] = False
+    citation: Optional[bool] = False
+    with_intent: Optional[bool] = False
+    index_name: Optional[str] = None
+    vector_db: Optional[VectorDbConfig] = None
+    llm: Optional[bool] = True
+    web: Optional[bool] = False
+    rag: Optional[bool] = False
+    nl2sql: Optional[bool] = False

@@ -10,12 +10,10 @@ import pandas as pd
 from pai_rag.core.models.errors import UserInputError
 from pai_rag.core.rag_index_manager import RagIndexEntry, index_manager
 from pai_rag.core.rag_service import rag_service
-from pai_rag.app.api.models import (
-    RagQuery,
-    RetrievalQuery,
-)
+from pai_rag.app.api.models import RagQuery, RetrievalQuery, ChatCompletionRequest
 from fastapi.responses import StreamingResponse
 from loguru import logger
+
 
 from pai_rag.integrations.nodeparsers.pai.pai_node_parser import (
     COMMON_FILE_PATH_FODER_NAME,
@@ -318,3 +316,55 @@ async def aquery_analysis(query: RagQuery):
 @router_v1.get("/health")
 def health_check():
     return {"status": "OK"}
+
+
+@router_v1.post("/chat/completions")
+async def chat_completions(request: ChatCompletionRequest):
+    query = RagQuery(
+        question=request.messages[-1].content,
+        chat_history=request.messages[:-1],
+        stream=request.stream,
+        temperature=request.temperature,
+        vector_db=request.vector_db,
+        session_id=request.session_id,
+        citation=request.citation,
+        with_intent=request.with_intent,
+        index_name=request.index_name,
+    )
+
+    if request.llm:
+        response = await rag_service.aquery_llm_v1(query)
+        if not query.stream:
+            return response
+        else:
+            return StreamingResponse(
+                response,
+                media_type="text/event-stream",
+            )
+    elif request.web:
+        response = await rag_service.aquery_search_v1(query)
+        if not query.stream:
+            return response
+        else:
+            return StreamingResponse(
+                response,
+                media_type="text/event-stream",
+            )
+    elif request.rag:
+        response = await rag_service.aquery_v1(query)
+        if not query.stream:
+            return response
+        else:
+            return StreamingResponse(
+                response,
+                media_type="text/event-stream",
+            )
+    elif request.nl2sql:
+        response = await rag_service.aquery_data_analysis_v1(query)
+        if not query.stream:
+            return response
+        else:
+            return StreamingResponse(
+                response,
+                media_type="text/event-stream",
+            )

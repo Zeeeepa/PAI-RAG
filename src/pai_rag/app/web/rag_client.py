@@ -9,10 +9,14 @@ import html
 import mimetypes
 from http import HTTPStatus
 from loguru import logger
+from openai import OpenAI
 from pai_rag.app.web.view_model import ViewModel
 from pai_rag.app.web.ui_constants import EMPTY_KNOWLEDGEBASE_MESSAGE
 from pai_rag.core.rag_config import RagConfig
 from pai_rag.core.rag_index_manager import RagIndexEntry, RagIndexMap
+from pai_rag.app.api.models import (
+    ChatCompletionRequest,
+)
 from urllib.parse import urljoin
 
 DEFAULT_CLIENT_TIME_OUT = 120
@@ -116,6 +120,10 @@ class RagWebClient:
     @property
     def health_check_url(self):
         return urljoin(self.endpoint, "api/v1/health")
+
+    @property
+    def openai_chat_completion_url(self):
+        return urljoin(self.endpoint, "api/v1")
 
     def _format_rag_response(
         self, response, with_history: bool = False, stream: bool = False
@@ -587,6 +595,67 @@ class RagWebClient:
             raise RagApiError(
                 code=r.status_code, msg=f"delete index {index_name} failed. {r.text}"
             )
+
+    def openai_chat_completions(
+        self,
+        text: str,
+        with_history: bool = False,
+        stream: bool = False,
+        citation: bool = False,
+        with_intent: bool = False,
+        index_name: str = None,
+    ):
+        session_id = self.session_id if with_history else None
+        client = OpenAI(
+            api_key="fake-api-key", base_url=self.openai_chat_completion_url
+        )
+        chat_completion_request = ChatCompletionRequest(
+            model="mock-gpt-model",
+            messages=[
+                {
+                    "role": "user",
+                    "content": text,
+                }
+            ],
+            session_id=session_id,
+            with_history=with_history,
+            stream=stream,
+            citation=citation,
+            with_intent=with_intent,
+            index_name=index_name,
+        )
+        logger.info(f"chat_completion_request: {chat_completion_request}")
+
+        # call API
+        try:
+            response = client.chat.completions.create(
+                messages=chat_completion_request.messages,
+                model=chat_completion_request.model,
+                stream=stream,
+            )
+
+            if not stream:
+                if chat_completion_request.llm or chat_completion_request.rag:
+                    yield self._format_rag_response(
+                        response.model_dump(), with_history=with_history, stream=stream
+                    )
+                else:
+                    yield self._format_rag_response(
+                        response.model_dump(), stream=stream
+                    )
+            else:
+                for chunk in response:
+                    chunk_response = chunk.model_dump()  # 将响应对象解析为字典
+                    if chat_completion_request.llm or chat_completion_request.rag:
+                        yield self._format_rag_response(
+                            chunk_response, with_history=with_history, stream=stream
+                        )
+                    else:
+                        yield self._format_rag_response(chunk_response, stream=stream)
+
+        except Exception as e:
+            logger.error(f"Error calling API: {e}")
+            raise
 
 
 rag_client = RagWebClient()
