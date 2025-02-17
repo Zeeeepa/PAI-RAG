@@ -5,7 +5,7 @@ PAI-RAG支持使用OpenAI兼容的API访问，进而可以连接open-webui等常
 ### 1、地址信息
 
 1）ENDPOINT: 这里以PAI-EAS为例, EAS服务调用地址 `EAS_SERVICE_URL/v1`
-2）API_KEY: `这里以PAI-EAS为例,  EAS_TOKEN`
+2）API_KEY: 这里以PAI-EAS为例, `EAS_TOKEN`
 
 ### 2、网络搜索
 
