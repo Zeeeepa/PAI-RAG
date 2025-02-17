@@ -152,6 +152,7 @@ If you prefer to run or develop PAI-RAG locally, please refer to [local developm
 ## API specification
 
 You can access and integrate our RAG service according to our [API specification](./docs/api.md).
+Also you can see OpenAI compatible API specification: [OpenAI API specification](./docs/openai_api.md).
 
 ## MultiModal RAG
 

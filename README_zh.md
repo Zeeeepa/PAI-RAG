@@ -151,6 +151,7 @@ PAI-RAG 是一个易于使用的模块化 RAG（检索增强生成）开源框�
 ## API服务
 
 可以直接通过API服务调用RAG能力（上传数据，RAG查询，检索，NL2SQL, Function call等等）。更多细节可以查看[API文档](./docs/api_zh.md)
+OpenAI兼容的API接口可以在[OpenAI API](./docs/api_zh.md)中找到。
 
 ## 多模态问答
 
