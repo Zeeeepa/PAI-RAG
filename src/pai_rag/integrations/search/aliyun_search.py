@@ -129,7 +129,7 @@ class AliyunSearchTool(BaseQueryEngine):
         if not nodes or not self.postprocessor:
             return nodes
 
-        return await self.postprocessor.postprocess_nodes(
+        return self.postprocessor.postprocess_nodes(
             nodes=nodes,
             query_bundle=query_bundle,
         )
