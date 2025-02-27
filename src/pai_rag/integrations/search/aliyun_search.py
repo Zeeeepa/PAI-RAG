@@ -1,4 +1,5 @@
 import asyncio
+from typing import List
 from llama_index.core.schema import NodeWithScore, TextNode
 from llama_index.core.query_engine import BaseQueryEngine
 from llama_index.core.response_synthesizers import BaseSynthesizer
@@ -9,7 +10,10 @@ from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_iqs20241111 import models
 from alibabacloud_iqs20241111.client import Client
 
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.node_parser.text.utils import split_by_sep
 from pai_rag.app.api.models import PaiQueryBundle
+from pai_rag.integrations.postprocessor.pai.pai_postprocessor import PaiPostProcessor
 from pai_rag.integrations.search.bing_search import DEFAULT_SEARCH_COUNT
 from pai_rag.integrations.search.bs4_reader import ParallelBeautifulSoupWebReader
 from pai_rag.integrations.search.search_config import DEFAULT_ALIYUN_SEARCH_ENDPOINT
@@ -30,12 +34,20 @@ class AliyunSearchTool(BaseQueryEngine):
         search_count: int = DEFAULT_SEARCH_COUNT,
         search_lang: str = DEFAULT_LANG,
         time_range: str = DEFAULT_TIMERANGE,
+        postprocessor: PaiPostProcessor = None,
     ):
         config = open_api_models.Config(
             access_key_id=access_key_id,
             access_key_secret=access_key_secret,
         )
         self.synthesizer = synthesizer
+        self.postprocessor = postprocessor
+        self.splitter = SentenceSplitter(
+            chunk_size=400,
+            chunk_overlap=20,
+            paragraph_separator="\n\n",
+            chunking_tokenizer_fn=split_by_sep("\n"),
+        )
 
         self.search_count = search_count
         self.search_lang = search_lang
@@ -73,6 +85,7 @@ class AliyunSearchTool(BaseQueryEngine):
         search_results = await asyncio.gather(*search_tasks)
 
         nodes = []
+        i = 0
         for result in search_results:
             items = result.get("pageItems")
             for item in items:
@@ -80,24 +93,47 @@ class AliyunSearchTool(BaseQueryEngine):
                 if not text:
                     continue
 
+                i += 1
                 score = 0.1
-                node = TextNode(
-                    text=text[:800],
-                    metadata={
-                        "file_url": item.get("link"),
-                        "file_name": item.get("htmlTitle") or item.get("title"),
-                    },
-                )
-                if item.get("publishTime"):
-                    node.metadata["publish_time"] = item.get("publishTime")
-                if item.get("hostname"):
-                    node.metadata["source"] = item.get("hostname")
-                if item.get("score"):
-                    score = item.get("score")
-                nodes.append(NodeWithScore(node=node, score=score))
-                if len(nodes) >= self.search_count:
+
+                raw_text = text[:800]
+                texts = [raw_text]
+                if self.postprocessor is not None:
+                    texts = self.splitter.split_text(raw_text)
+
+                for text in texts:
+                    node = TextNode(
+                        text=text,
+                        metadata={
+                            "file_url": item.get("link"),
+                            "file_name": item.get("htmlTitle") or item.get("title"),
+                        },
+                    )
+
+                    if item.get("publishTime"):
+                        node.metadata["publish_time"] = item.get("publishTime")
+                    if item.get("hostname"):
+                        node.metadata["source"] = item.get("hostname")
+                    if item.get("score"):
+                        score = item.get("score")
+                    nodes.append(NodeWithScore(node=node, score=score))
+
+                if i >= self.search_count:
                     break
         return nodes
+
+    def _split(self, nodes: List[NodeWithScore]):
+        if not nodes:
+            return []
+
+    async def _arerank(self, query_bundle: QueryBundle, nodes: List[NodeWithScore]):
+        if not nodes or not self.postprocessor:
+            return nodes
+
+        return await self.postprocessor.postprocess_nodes(
+            nodes=nodes,
+            query_bundle=query_bundle,
+        )
 
     async def aquery(
         self,
@@ -125,10 +161,14 @@ class AliyunSearchTool(BaseQueryEngine):
         logger.info(
             f"[WebSearch]-Aliyun: Get {len(nodes)} docs from url. Elapsed time: {time.time() - start}seconds."
         )
+        reranked_nodes = await self._arerank(query_bundle=query, nodes=nodes)
+        logger.info(
+            f"[WebSearch]-Aliyun: Get {len(reranked_nodes)} docs after rerank. Elapsed time: {time.time() - start}seconds."
+        )
 
         return await self.synthesizer.asynthesize(
             query=query,
-            nodes=nodes,
+            nodes=reranked_nodes,
             system_role_str=system_role_str,
             prompt_template_str=prompt_template_str,
         )

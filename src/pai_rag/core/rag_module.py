@@ -22,7 +22,10 @@ from pai_rag.integrations.guardrail.pai_guardrail import PaiLlmGuardrail
 from pai_rag.integrations.index.pai.pai_vector_index import PaiVectorStoreIndex
 from pai_rag.integrations.nodeparsers.pai.pai_node_parser import PaiNodeParser
 from pai_rag.integrations.nodes.raptor_nodes_enhance import RaptorProcessor
-from pai_rag.integrations.postprocessor.pai.pai_postprocessor import PaiPostProcessor
+from pai_rag.integrations.postprocessor.pai.pai_postprocessor import (
+    PaiPostProcessor,
+    RerankModelPostProcessorConfig,
+)
 from pai_rag.integrations.query_engine.pai_retriever_query_engine import (
     PaiRetrieverQueryEngine,
 )
@@ -307,12 +310,18 @@ def resolve_searcher(config: RagConfig) -> BaseQueryEngine:
         and config.search.access_key_id
         and config.search.access_key_secret
     ):
+        postprocessor = resolve(
+            cls=PaiPostProcessor,
+            postprocessor_config=RerankModelPostProcessorConfig(top_n=5),
+        )
+
         searcher = resolve(
             cls=AliyunSearchTool,
             access_key_id=config.search.access_key_id,
             access_key_secret=config.search.access_key_secret,
             endpoint=config.search.endpoint,
             synthesizer=synthesizer,
+            postprocessor=postprocessor,
             search_count=config.search.search_count,
         )
     elif isinstance(config.search, GoogleSearchConfig) and config.search.serpapi_key:
