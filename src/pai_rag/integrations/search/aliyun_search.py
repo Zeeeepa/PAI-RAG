@@ -13,7 +13,7 @@ from alibabacloud_iqs20241111.client import Client
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.node_parser.text.utils import split_by_sep
 from pai_rag.app.api.models import PaiQueryBundle
-from pai_rag.integrations.postprocessor.pai.pai_postprocessor import PaiPostProcessor
+from pai_rag.integrations.postprocessor.pai.pai_reranker import PaiPostProcessor
 from pai_rag.integrations.search.bing_search import DEFAULT_SEARCH_COUNT
 from pai_rag.integrations.search.bs4_reader import ParallelBeautifulSoupWebReader
 from pai_rag.integrations.search.search_config import DEFAULT_ALIYUN_SEARCH_ENDPOINT
@@ -125,15 +125,6 @@ class AliyunSearchTool(BaseQueryEngine):
         if not nodes:
             return []
 
-    async def _arerank(self, query_bundle: QueryBundle, nodes: List[NodeWithScore]):
-        if not nodes or not self.postprocessor:
-            return nodes
-
-        return self.postprocessor.postprocess_nodes(
-            nodes=nodes,
-            query_bundle=query_bundle,
-        )
-
     async def aquery(
         self,
         query: QueryBundle,
@@ -160,7 +151,11 @@ class AliyunSearchTool(BaseQueryEngine):
         logger.info(
             f"[WebSearch]-Aliyun: Get {len(nodes)} docs from url. Elapsed time: {time.time() - start}seconds."
         )
-        reranked_nodes = await self._arerank(query_bundle=query, nodes=nodes)
+        if self.postprocessor:
+            reranked_nodes = await self.postprocessor.arerank(
+                query_str=query.query_str, nodes=nodes
+            )
+
         logger.info(
             f"[WebSearch]-Aliyun: Get {len(reranked_nodes)} docs after rerank. Elapsed time: {time.time() - start}seconds."
         )

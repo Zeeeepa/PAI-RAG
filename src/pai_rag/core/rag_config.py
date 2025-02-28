@@ -30,9 +30,10 @@ from pai_rag.integrations.llms.pai.llm_config import (
     OpenAICompatibleLlmConfig,
 )
 from pai_rag.integrations.nodeparsers.pai.pai_node_parser import NodeParserConfig
-from pai_rag.integrations.postprocessor.pai.pai_postprocessor import (
+from pai_rag.integrations.postprocessor.pai.pai_reranker import (
     RerankModelPostProcessorConfig,
     SimilarityPostProcessorConfig,
+    EasRerankerPostProcessorConfig,
 )
 from pai_rag.integrations.readers.pai.pai_data_reader import BaseDataReaderConfig
 from pai_rag.integrations.router.pai.pai_router import IntentConfig
@@ -146,7 +147,11 @@ class RagConfig(BaseModel):
 
     # postprocessor
     postprocessor: Annotated[
-        Union[SimilarityPostProcessorConfig, RerankModelPostProcessorConfig],
+        Union[
+            SimilarityPostProcessorConfig,
+            RerankModelPostProcessorConfig,
+            EasRerankerPostProcessorConfig,
+        ],
         Field(discriminator="reranker_type"),
         BeforeValidator(validate_case_insensitive),
     ]

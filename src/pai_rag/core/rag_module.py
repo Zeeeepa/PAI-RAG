@@ -22,9 +22,8 @@ from pai_rag.integrations.guardrail.pai_guardrail import PaiLlmGuardrail
 from pai_rag.integrations.index.pai.pai_vector_index import PaiVectorStoreIndex
 from pai_rag.integrations.nodeparsers.pai.pai_node_parser import PaiNodeParser
 from pai_rag.integrations.nodes.raptor_nodes_enhance import RaptorProcessor
-from pai_rag.integrations.postprocessor.pai.pai_postprocessor import (
+from pai_rag.integrations.postprocessor.pai.pai_reranker import (
     PaiPostProcessor,
-    RerankModelPostProcessorConfig,
 )
 from pai_rag.integrations.query_engine.pai_retriever_query_engine import (
     PaiRetrieverQueryEngine,
@@ -265,15 +264,13 @@ def resolve_query_engine(config: RagConfig) -> PaiRetrieverQueryEngine:
     )
 
     synthesizer = resolve_synthesizer(config)
-    postprocessor = resolve(
-        cls=PaiPostProcessor, postprocessor_config=config.postprocessor
-    )
+    reranker = resolve(cls=PaiPostProcessor, postprocessor_config=config.postprocessor)
 
     query_engine = resolve(
         cls=PaiRetrieverQueryEngine,
         retriever=retriever,
         response_synthesizer=synthesizer,
-        node_postprocessors=[postprocessor],
+        reranker=reranker,
         callback_manager=Settings.callback_manager,
     )
 
@@ -312,7 +309,7 @@ def resolve_searcher(config: RagConfig) -> BaseQueryEngine:
     ):
         postprocessor = resolve(
             cls=PaiPostProcessor,
-            postprocessor_config=RerankModelPostProcessorConfig(top_n=5),
+            postprocessor_config=config.postprocessor,
         )
 
         searcher = resolve(

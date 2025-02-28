@@ -252,17 +252,19 @@ The retrieval mode as well as the similarity top k can also be set in webui.
 
 ## rag.postprocessor
 
-rerank_model = [no-reranker, bge-reranker-base, bge-reranker-large, llm-reranker]
+rerank_type = [no-reranker, eas-reranker-api]
 
-Currently, pai_rag supports three rerank models, among which llm-reranker uses the llm itself.
+Currently, pai_rag supports weighted reranker and EAS reranker API.
 
 If you do not need a reranker, simply set as follows:
 
     rerank_model = "no_reranker"
 
-If a candidate model is selected, please also specify the top number of nodes to be returned:
+If a eas-reranker-api is selected, the setting is as follows:
 
-    rerank_model = ""  # [bge-reranker-base, bge-reranker-large, llm-reranker]
+    rerank_type = "eas-reranker-api"
+    endpoint = ""
+    token = ""
     top_n = 2
 
 This setting is also available in webui.

@@ -247,17 +247,19 @@ retrieval_mode 和 similarity_top_k 可在网页中设置。
 
 ## rag.postprocessor
 
-rerank_model = [no-reranker, bge-reranker-base, bge-reranker-large, llm-reranker]
+rerank_model = [no-reranker, eas-reranker-api]
 
-目前, pai_rag 支持三种重排模型, 其中 llm-reranker 使用 llm 自身能力进行重排，其它两种为专门训练的小模型。
+目前, pai*rag 支持加权分数重排序和[EAS重排序服务](https://pai.console.aliyun.com/?regionId=cn-hangzhou&scm=20140722.S_learn.*.ID_learn-RL_PAI-LOC_console_console-OR_ser-V_4-P0_0&spm=5176.12818093_47.console-base_search-panel.dtab-product_learn.3be916d0kVdU78&workspaceId=146707#/quick-start/models/bge-reranker-large/intro)
 
 如果无需使用reranker，配置如下:
 
-    rerank_model = "no_reranker"
+    rerank_type = "no_reranker"
 
-如果选择其中一个模型, 需要指定重排后返回的节点数量:
+如果选择`eas-reranker-api`, 需要指定重排的服务Endpoint、Token以及返回的节点数量。
 
-    rerank_model = ""  # [bge-reranker-base, bge-reranker-large, llm-reranker]
+    rerank_type = "eas-reranker-api"
+    endpoint = ""
+    token = ""
     top_n = 2
 
 以上参数支持网页中配置。

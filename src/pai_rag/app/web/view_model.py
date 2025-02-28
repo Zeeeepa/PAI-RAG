@@ -20,7 +20,8 @@ from pai_rag.integrations.llms.pai.llm_config import (
     PaiEasLlmConfig,
     SupportedLlmType,
 )
-from pai_rag.integrations.postprocessor.pai.pai_postprocessor import (
+from pai_rag.integrations.postprocessor.pai.pai_reranker import (
+    EasRerankerPostProcessorConfig,
     SimilarityPostProcessorConfig,
 )
 from pai_rag.integrations.search.search_config import (
@@ -137,6 +138,8 @@ class ViewModel(BaseModel):
     # postprocessor
     reranker_type: str = "no-reranker"  # no-reranker / model-based-reranker
     reranker_model: str = "bge-reranker-base"  # bge-reranker-base / bge-reranker-large
+    eas_reranker_endpoint: str = ""
+    eas_reranker_token: str = ""
     keyword_weight: float = 0.3
     vector_weight: float = 0.7
     similarity_threshold: float = 0.5
@@ -251,6 +254,13 @@ class ViewModel(BaseModel):
         view_model.reranker_type = config.postprocessor.reranker_type.value
         if isinstance(config.postprocessor, SimilarityPostProcessorConfig):
             view_model.similarity_threshold = config.postprocessor.similarity_threshold
+        elif isinstance(config.postprocessor, EasRerankerPostProcessorConfig):
+            view_model.eas_reranker_endpoint = config.postprocessor.endpoint
+            view_model.eas_reranker_token = config.postprocessor.token
+            view_model.reranker_similarity_top_k = config.postprocessor.top_n
+            view_model.reranker_similarity_threshold = (
+                config.postprocessor.similarity_threshold
+            )
         else:
             view_model.reranker_model = config.postprocessor.reranker_model
             view_model.reranker_similarity_top_k = config.postprocessor.top_n
@@ -461,6 +471,8 @@ class ViewModel(BaseModel):
 
         config["postprocessor"]["reranker_type"] = self.reranker_type
         config["postprocessor"]["reranker_model"] = self.reranker_model
+        config["postprocessor"]["endpoint"] = self.eas_reranker_endpoint
+        config["postprocessor"]["token"] = self.eas_reranker_token
         if self.reranker_type == "no-reranker":
             config["postprocessor"]["similarity_threshold"] = self.similarity_threshold
         else:
@@ -635,7 +647,15 @@ class ViewModel(BaseModel):
 
         # retrieval and rerank
         settings["retrieval_mode"] = {"value": self.retrieval_mode}
-        settings["reranker_type"] = {"value": self.reranker_type}
+
+        rerank_choices = ["no-reranker", "eas-reranker-api"]
+        if self.reranker_type not in rerank_choices:
+            rerank_choices.append(self.reranker_type)
+
+        settings["reranker_type"] = {
+            "value": self.reranker_type,
+            "choices": rerank_choices,
+        }
         settings["similarity_top_k"] = {"value": self.similarity_top_k}
         settings["image_similarity_top_k"] = {"value": self.image_similarity_top_k}
         settings["need_image"] = {"value": self.need_image}
@@ -653,13 +673,23 @@ class ViewModel(BaseModel):
         }
         settings["similarity_threshold"] = {"value": self.similarity_threshold}
         settings["reranker_similarity_threshold"] = {
-            "value": self.reranker_similarity_threshold
+            "value": self.reranker_similarity_threshold,
+            "visible": self.reranker_type != "no-reranker",
         }
         settings["reranker_similarity_top_k"] = {
-            "value": self.reranker_similarity_top_k
+            "value": self.reranker_similarity_top_k,
+            "visible": self.reranker_type != "no-reranker",
+        }
+        settings["eas_reranker_endpoint"] = {
+            "value": self.eas_reranker_endpoint,
+            "visible": self.reranker_type == "eas-reranker-api",
+        }
+        settings["eas_reranker_token"] = {
+            "value": self.eas_reranker_token,
+            "visible": self.reranker_type == "eas-reranker-api",
         }
         settings["model_reranker_col"] = {
-            "visible": self.reranker_type == "model-based-reranker"
+            "visible": self.reranker_type == "model-based-reranker",
         }
         settings["query_transform_template"] = {
             "value": self.query_transform_template,

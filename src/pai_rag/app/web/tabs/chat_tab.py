@@ -270,38 +270,6 @@ def create_chat_tab() -> Dict[str, Any]:
                         label="Similarity Score Threshold (The more similar the items, the bigger the value.)",
                     )
 
-                    reranker_type = gr.Radio(
-                        ["no-reranker", "model-based-reranker"],
-                        label="Reranker Type",
-                        elem_id="reranker_type",
-                    )
-                    with gr.Column(
-                        visible=(reranker_type == "model-based-reranker"),
-                        elem_id="model_reranker_col",
-                    ) as model_reranker_col:
-                        reranker_model = gr.Radio(
-                            [
-                                "bge-reranker-base",
-                                "bge-reranker-large",
-                            ],
-                            label="Re-Ranker Model (Note: It will take a long time to load the model when using it for the first time.)",
-                            elem_id="reranker_model",
-                        )
-                        reranker_similarity_threshold = gr.Slider(
-                            minimum=-10,
-                            maximum=10,
-                            step=0.01,
-                            elem_id="reranker_similarity_threshold",
-                            label="Reranker Similarity Score Threshold (The more similar the items, the bigger the value.)",
-                        )
-                        reranker_similarity_top_k = gr.Slider(
-                            minimum=0,
-                            maximum=50,
-                            step=1,
-                            elem_id="reranker_similarity_top_k",
-                            label="Reranker Text Top K (choose between 0 and 50)",
-                        )
-
                     def change_weight(change_weight):
                         return round(float(1 - change_weight), 2)
 
@@ -311,55 +279,13 @@ def create_chat_tab() -> Dict[str, Any]:
                         outputs=[keyword_weight],
                     )
 
-                    def change_reranker_type(reranker_type):
-                        if reranker_type == "no-reranker":
-                            return {
-                                model_reranker_col: gr.update(visible=False),
-                            }
-                        elif reranker_type == "model-based-reranker":
-                            return {
-                                model_reranker_col: gr.update(visible=True),
-                            }
-                        else:
-                            return {
-                                model_reranker_col: gr.update(visible=False),
-                            }
-
-                    def change_retrieval_mode(retrieval_mode):
-                        if retrieval_mode == "Hybrid":
-                            return {
-                                vector_weight: gr.update(visible=True),
-                                keyword_weight: gr.update(visible=True),
-                            }
-                        else:
-                            return {
-                                vector_weight: gr.update(visible=False),
-                                keyword_weight: gr.update(visible=False),
-                            }
-
-                    reranker_type.input(
-                        fn=change_reranker_type,
-                        inputs=reranker_type,
-                        outputs=[model_reranker_col],
-                    )
-
-                    retrieval_mode.input(
-                        fn=change_retrieval_mode,
-                        inputs=retrieval_mode,
-                        outputs=[vector_weight, keyword_weight],
-                    )
-
                 vec_args = {
                     retrieval_mode,
-                    reranker_type,
                     vector_weight,
                     keyword_weight,
                     similarity_top_k,
                     image_similarity_top_k,
                     similarity_threshold,
-                    reranker_similarity_threshold,
-                    reranker_model,
-                    reranker_similarity_top_k,
                 }
 
             with gr.Column(visible=True) as lc_col:
@@ -632,13 +558,9 @@ def create_chat_tab() -> Dict[str, Any]:
             image_similarity_top_k.elem_id: image_similarity_top_k,
             need_image.elem_id: need_image,
             retrieval_mode.elem_id: retrieval_mode,
-            reranker_type.elem_id: reranker_type,
-            reranker_model.elem_id: reranker_model,
             vector_weight.elem_id: vector_weight,
             keyword_weight.elem_id: keyword_weight,
             similarity_threshold.elem_id: similarity_threshold,
-            reranker_similarity_threshold.elem_id: reranker_similarity_threshold,
-            reranker_similarity_top_k.elem_id: reranker_similarity_top_k,
             enable_query_transform.elem_id: enable_query_transform,
             query_transform_template.elem_id: query_transform_template,
             qt_llm_base_url.elem_id: qt_llm_base_url,
@@ -654,7 +576,6 @@ def create_chat_tab() -> Dict[str, Any]:
             aliyun_endpoint.elem_id: aliyun_endpoint,
             aliyun_access_key_id.elem_id: aliyun_access_key_id,
             aliyun_access_key_secret.elem_id: aliyun_access_key_secret,
-            model_reranker_col.elem_id: model_reranker_col,
             llm_temperature.elem_id: llm_temperature,
             query_type.elem_id: query_type,
         }

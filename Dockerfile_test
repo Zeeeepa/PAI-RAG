@@ -1,0 +1,4 @@
+from mybigpai-registry.cn-beijing.cr.aliyuncs.com/mybigpai/pairag:1.1.0
+
+RUN rm -rf /app/src
+COPY ./src /app/src

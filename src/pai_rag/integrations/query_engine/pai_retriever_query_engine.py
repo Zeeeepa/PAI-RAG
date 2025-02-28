@@ -1,11 +1,9 @@
 from typing import List, Optional, Sequence, Union
 from llama_index.core.base.base_retriever import BaseRetriever
-from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.base.response.schema import RESPONSE_TYPE
 from llama_index.core.callbacks.schema import CBEventType, EventPayload
 from llama_index.core.schema import NodeWithScore, QueryBundle, ImageNode, QueryType
 from llama_index.core.query_engine import RetrieverQueryEngine
-from llama_index.core.indices.query.query_transform.base import BaseQueryTransform
 from llama_index.core.callbacks.base import CallbackManager
 import llama_index.core.instrumentation as instrument
 from llama_index.core.response_synthesizers import BaseSynthesizer
@@ -18,6 +16,7 @@ from llama_index.core.base.llms.types import (
     ChatResponseAsyncGen,
 )
 from pai_rag.app.api.models import PaiQueryBundle
+from pai_rag.integrations.postprocessor.pai.pai_reranker import PaiPostProcessor
 
 dispatcher = instrument.get_dispatcher(__name__)
 
@@ -39,46 +38,24 @@ class PaiRetrieverQueryEngine(RetrieverQueryEngine):
     def __init__(
         self,
         retriever: BaseRetriever,
-        query_transform: Optional[BaseQueryTransform] = None,
         response_synthesizer: Optional[BaseSynthesizer] = None,
-        node_postprocessors: Optional[List[BaseNodePostprocessor]] = None,
+        reranker: PaiPostProcessor = None,
         transform_metadata: Optional[dict] = None,
         callback_manager: Optional[CallbackManager] = None,
     ) -> None:
         super().__init__(
             retriever=retriever,
             response_synthesizer=response_synthesizer,
-            node_postprocessors=node_postprocessors,
             callback_manager=callback_manager,
         )
-
-        self._query_transform = query_transform
+        self._reranker = reranker
         self._transform_metadata = transform_metadata
 
     def retrieve(self, query_bundle: QueryBundle) -> List[NodeWithScore]:
-        if self._query_transform:
-            query_bundle = self._query_transform.run(
-                query_bundle, metadata=self._transform_metadata
-            )
-        nodes = self._retriever.retrieve(query_bundle)
-        text_nodes, image_nodes = [], []
-        for node in nodes:
-            if isinstance(node.node, ImageNode):
-                image_nodes.append(node)
-            else:
-                text_nodes.append(node)
-
-        text_nodes = self._apply_node_postprocessors(
-            text_nodes, query_bundle=query_bundle
-        )
-        return [n for n in text_nodes] + image_nodes
+        raise NotImplementedError
 
     # 支持异步
     async def aretrieve(self, query_bundle: QueryBundle) -> List[NodeWithScore]:
-        if self._query_transform:
-            query_bundle = await self._query_transform.arun(
-                query_bundle, metadata=self._transform_metadata
-            )
         nodes = await self._retriever.aretrieve(query_bundle)
         text_nodes, image_nodes = [], []
         for node in nodes:
@@ -87,11 +64,10 @@ class PaiRetrieverQueryEngine(RetrieverQueryEngine):
             else:
                 text_nodes.append(node)
 
-        for node_postprocessor in self._node_postprocessors:
-            text_nodes = node_postprocessor.postprocess_nodes(
-                text_nodes,
-                query_bundle=query_bundle,
-            )
+        text_nodes = await self._reranker.arerank(
+            query_str=query_bundle.query_str,
+            nodes=text_nodes,
+        )
 
         return [n for n in text_nodes] + image_nodes
 

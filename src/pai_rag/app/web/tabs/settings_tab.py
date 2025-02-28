@@ -200,6 +200,90 @@ def create_setting_tab() -> Dict[str, Any]:
                         interactive=True,
                         placeholder="Model Name, e.g. qwen-vl-max",
                     )
+                with gr.Column(scale=5, variant="panel"):
+                    _ = gr.Markdown(
+                        value="\N{WHITE MEDIUM STAR} **(Optional) Reranker**"
+                    )
+
+                    reranker_type = gr.Radio(
+                        ["no-reranker", "eas-reranker-api"],
+                        label="Reranker Type",
+                        elem_id="reranker_type",
+                    )
+
+                    eas_reranker_endpoint = gr.Textbox(
+                        label="EAS Reranker Endpoint",
+                        elem_id="eas_reranker_endpoint",
+                        interactive=True,
+                        placeholder="EAS Reranker Endpoint, e.g. http://reranker.17xxxxxxxx3.cn-hangzhou.pai-eas.aliyuncs.com/",
+                    )
+                    eas_reranker_token = gr.Textbox(
+                        label="EAS Reranker Token",
+                        elem_id="eas_reranker_token",
+                        interactive=True,
+                        type="password",
+                        placeholder="EAS Reranker Token",
+                    )
+                    reranker_model = gr.Radio(
+                        [
+                            "bge-reranker-base",
+                            "bge-reranker-large",
+                        ],
+                        label="Re-Ranker Model (Note: It will take a long time to load the model when using it for the first time.)",
+                        elem_id="reranker_model",
+                    )
+                    reranker_similarity_threshold = gr.Slider(
+                        minimum=-10,
+                        maximum=10,
+                        step=0.01,
+                        elem_id="reranker_similarity_threshold",
+                        label="Reranker Similarity Score Threshold (The more similar the items, the bigger the value.)",
+                    )
+                    reranker_similarity_top_k = gr.Slider(
+                        minimum=0,
+                        maximum=50,
+                        step=1,
+                        elem_id="reranker_similarity_top_k",
+                        label="Reranker Text Top K (choose between 0 and 50)",
+                    )
+
+                    def change_reranker_type(reranker_type):
+                        if reranker_type == "no-reranker":
+                            return {
+                                eas_reranker_endpoint: gr.update(visible=False),
+                                eas_reranker_token: gr.update(visible=False),
+                                reranker_model: gr.update(visible=False),
+                                reranker_similarity_top_k: gr.update(visible=False),
+                                reranker_similarity_threshold: gr.update(visible=False),
+                            }
+                        elif reranker_type == "model-based-reranker":
+                            return {
+                                eas_reranker_endpoint: gr.update(visible=False),
+                                eas_reranker_token: gr.update(visible=False),
+                                reranker_model: gr.update(visible=True),
+                                reranker_similarity_top_k: gr.update(visible=True),
+                                reranker_similarity_threshold: gr.update(visible=True),
+                            }
+                        else:
+                            return {
+                                eas_reranker_endpoint: gr.update(visible=True),
+                                eas_reranker_token: gr.update(visible=True),
+                                reranker_model: gr.update(visible=False),
+                                reranker_similarity_top_k: gr.update(visible=True),
+                                reranker_similarity_threshold: gr.update(visible=True),
+                            }
+
+                    reranker_type.input(
+                        fn=change_reranker_type,
+                        inputs=reranker_type,
+                        outputs=[
+                            eas_reranker_endpoint,
+                            eas_reranker_token,
+                            reranker_model,
+                            reranker_similarity_top_k,
+                            reranker_similarity_threshold,
+                        ],
+                    )
             with gr.Column(scale=5, variant="panel"):
                 _ = gr.Markdown(
                     value="\N{WHITE MEDIUM STAR} **(Optional, for saving image & load data) OSS Bucket**"
@@ -278,6 +362,12 @@ def create_setting_tab() -> Dict[str, Any]:
                 mllm_base_url,
                 mllm_model_name,
                 mllm_api_key,
+                reranker_type,
+                eas_reranker_endpoint,
+                eas_reranker_token,
+                reranker_model,
+                reranker_similarity_threshold,
+                reranker_similarity_top_k,
                 use_oss,
                 oss_ak,
                 oss_sk,
