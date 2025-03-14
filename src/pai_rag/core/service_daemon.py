@@ -2,7 +2,7 @@ import asyncio
 import os
 import subprocess
 import traceback
-
+from pathlib import Path
 from watchfiles import awatch
 from pai_rag.core.rag_service import rag_service
 from pai_rag.core.rag_environment import service_environment
@@ -11,6 +11,7 @@ from pai_rag.knowledgebase.rag_job_manager import job_manager, FileChange
 from loguru import logger
 from pai_rag.utils.constants import DEFAULT_KNOWLEDGEBASE_PATH
 from pai_rag.app.web.filebrower.constants import DEFAULT_FILE_BROWER_PORT
+from pai_rag.knowledgebase.rag_knowledgebase_helper import RagKnowledgeBaseHelper
 
 # Check every 30 seconds.
 CHECK_INTERVAL = 30
@@ -77,6 +78,10 @@ async def watch_knowledgebase_changes():
         # change_type: 1 add, 2 modified, 3 delete.
         for change_type, file_path in changes:
             is_delete = change_type == 3
+            is_dir = os.path.isdir(Path(file_path))
+            logger.info(
+                f"change_type: {change_type}, file_path:{file_path} os.path.isdir(Path(file_path)):{os.path.isdir(Path(file_path))}."
+            )
             try:
                 knowledgebase, change_docs = knowledgebase_manager.get_change_files(
                     file_path, is_delete=is_delete
@@ -101,6 +106,11 @@ async def watch_knowledgebase_changes():
                 logger.info(
                     f"changes enqueued. {knowledgebase}, {file_changes}, {change_type}"
                 )
+            if is_delete and is_dir:
+                logger.info(
+                    f"Delete files dir, is_delete: {is_delete}, is_dir:{is_dir}."
+                )
+                RagKnowledgeBaseHelper.delete_index_files_dir(knowledgebase, file_path)
 
 
 async def startup_event():

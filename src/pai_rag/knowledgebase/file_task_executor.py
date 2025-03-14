@@ -102,7 +102,12 @@ class FileTaskExecutor:
         yield FileProcessResult(status=FileProcessStatus.Done, message=None)
 
     def _delete(self, task: FileItem):
-        self.vector_index.delete_ref_doc(ref_doc_id=task.task_id)
+        try:
+            self.vector_index.delete_ref_doc(ref_doc_id=task.task_id)
+        except Exception as e:
+            logger.error(f"Delete ref_doc from DB {task.file_name} failed: {e}")
+        knowledgebase = knowledgebase_manager.get_knowledgebase(task.knowledgebase)
+        RagKnowledgeBaseHelper.delete_index_files(knowledgebase.name, task.file_name)
 
     def run(self, task: FileItem) -> Generator[FileProcessResult, None, None]:
         if task.operation == FileOperationType.DELETE:

@@ -6,6 +6,8 @@ from pai_rag.integrations.readers.pai.constants import ACCEPTABLE_DOC_TYPES
 from pai_rag.utils.index_utils import (
     write_markdown_to_parse_dir,
     copy_original_files_to_parse_dir,
+    delete_file,
+    delete_dir,
 )
 from pai_rag.utils.constants import DEFAULT_KNOWLEDGEBASE_PATH
 from loguru import logger
@@ -94,3 +96,62 @@ class RagKnowledgeBaseHelper:
             )
             with open(node_file_path, mode="w", encoding="utf-8") as file:
                 json.dump(filter_dict(node.dict()), file, ensure_ascii=False, indent=4)
+
+    @staticmethod
+    def delete_index_files(knowledgebase_name: str, file_path: str):
+        index_path = os.path.join(
+            DEFAULT_KNOWLEDGEBASE_PATH, knowledgebase_name, ".index"
+        )
+        file_name = file_path.split("/")[-1]
+        file_type = os.path.splitext(file_name)[1]
+        relative_path = "/".join(file_path.split("/")[4:-1])
+        relative_parse_path = os.path.join(index_path, "parse", relative_path)
+        if file_type in DOC_TYPES_CONVERT_TO_MD:
+            parse_path = os.path.join(relative_parse_path, f"{file_name}.md")
+        elif file_type in ACCEPTABLE_DOC_TYPES:
+            parse_path = os.path.join(relative_parse_path, file_name)
+        else:
+            raise ValueError(f"不支持的文件类型: {file_type}")
+        try:
+            delete_file(parse_path)
+        except Exception as e:
+            logger.error(f"删除知识库 {knowledgebase_name} 解析文件 {parse_path} 时发生错误: {e} ")
+
+        split_path = os.path.join(index_path, "split", relative_path, file_name)
+        try:
+            delete_dir(split_path)
+        except Exception as e:
+            logger.error(f"删除知识库 {knowledgebase_name} 切块文件目录 {split_path} 时发生错误: {e} ")
+
+        embed_path = os.path.join(index_path, "embed", relative_path, file_name)
+        try:
+            delete_dir(embed_path)
+        except Exception as e:
+            logger.error(f"删除知识库 {knowledgebase_name} 向量化文件目录 {embed_path} 时发生错误: {e} ")
+
+    @staticmethod
+    def delete_index_files_dir(knowledgebase_name: str, file_path: str):
+        index_path = os.path.join(
+            DEFAULT_KNOWLEDGEBASE_PATH, knowledgebase_name, ".index"
+        )
+        import pdb
+
+        pdb.set_trace()
+        relative_path = "/".join(file_path.split("/")[4:])
+        parse_path = os.path.join(index_path, "parse", relative_path)
+        try:
+            delete_dir(parse_path)
+        except Exception as e:
+            logger.error(f"删除知识库 {knowledgebase_name} 解析文件 {parse_path} 时发生错误: {e} ")
+
+        split_path = os.path.join(index_path, "split", relative_path)
+        try:
+            delete_dir(split_path)
+        except Exception as e:
+            logger.error(f"删除知识库 {knowledgebase_name} 切块文件目录 {split_path} 时发生错误: {e} ")
+
+        embed_path = os.path.join(index_path, "embed", relative_path)
+        try:
+            delete_dir(embed_path)
+        except Exception as e:
+            logger.error(f"删除知识库 {knowledgebase_name} 向量化文件目录 {embed_path} 时发生错误: {e} ")

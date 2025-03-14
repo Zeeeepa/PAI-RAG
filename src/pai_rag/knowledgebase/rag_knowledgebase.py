@@ -339,12 +339,14 @@ class KnowledgeBaseManager:
             return []
         doc_store = self._doc_store_map[knowledgebase_name]
         if not os.path.isdir(file_name):
+            print(f"delete files is not dir: {file_name}")
             if doc_store.doc_map.get(file_name, None):
                 return [doc_store.doc_map[file_name]]
 
             logger.warning(f"在知识库'{knowledgebase_name}'中没找到文件'{file_name}'。")
             return []
         else:
+            print(f"delete files is dir: {file_name}")
             return [
                 v
                 for k, v in doc_store.doc_map.items()
