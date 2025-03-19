@@ -8,6 +8,7 @@ from pai_rag.app.api.middleware import init_middleware
 from pai_rag.app.api.error_handler import config_app_errors
 from pai_rag.app.web.webui import configure_webapp
 from pai_rag.core.rag_environment import service_environment
+from loguru import logger
 
 
 def init_router(app: FastAPI):
@@ -19,6 +20,7 @@ def init_router(app: FastAPI):
     app.include_router(router_v1, prefix="/api/v1", tags=["api_v1"])
     app.include_router(agent_demo.demo_router, tags=["AgentDemo"], prefix="/demo/api")
     if service_environment.SHOULD_START_WEB:
+        logger.info("starting gradio web app.")
         configure_webapp(app)
 
 

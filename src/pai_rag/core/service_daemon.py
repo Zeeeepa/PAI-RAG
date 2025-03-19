@@ -105,6 +105,11 @@ async def watch_knowledgebase_changes():
 
 async def startup_event():
     # 启动后台任务
-    asyncio.create_task(host_filebrowser_in_background())
+    if service_environment.SHOULD_START_WEB:
+        logger.info("Starting up filebrowser and file watcher in background.")
+        asyncio.create_task(host_filebrowser_in_background())
+        asyncio.create_task(watch_knowledgebase_changes())
+    else:
+        logger.info("Skip filebrowser and file watcher.")
+
     asyncio.create_task(periodic_check_config())
-    asyncio.create_task(watch_knowledgebase_changes())

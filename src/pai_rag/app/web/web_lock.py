@@ -1,29 +1,30 @@
-from filelock import Timeout, FileLock
+import fcntl
+import os
+import time
 from loguru import logger
 
-lock_file_path = "localdata/__shared_gradio_instance.lock"
+INSTANCE_SERVICE_NAME = os.environ.get("SERVICE_NAME", "default")
+DEFAULT_LOCK_FILE_PATH = "localdata/__web_instance_lock__{INSTANCE_SERVICE_NAME}__.lock"
 
 
 class WebInstanceLock:
-    def __init__(self):
-        open(lock_file_path, "w").write("abc")
-        self.lock = FileLock(lock_file_path, timeout=2)
-        self.has_lock = False
-
-    def try_acquire(self):
-        try:
-            self.lock.acquire()
-            self.has_lock = True
-            return True
-        except Timeout:
-            logger.info("Acuiqre lock failed due to timeout.")
-            return False
-
-    def try_release(self):
-        if self.has_lock:
+    @staticmethod
+    def try_acquire(file_handler, timeout=2):
+        start_time = time.time()
+        while True:
             try:
-                self.lock.release()
+                # 尝试获取排它锁，使用 LOCK_NB 进行非阻塞操作
+                fcntl.flock(file_handler, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                logger.info("Acquire lock successfully.")
                 return True
-            except Exception as ex:
-                logger.info(f"Release lock failed: {ex}")
-                return False
+            except BlockingIOError:
+                # 被锁住，检查是否超时
+                if time.time() - start_time > timeout:
+                    logger.info("Acquire lock failed.")
+                    return False
+                time.sleep(0.1)  # 短暂等待再尝试
+
+    @staticmethod
+    def release(file_handler):
+        fcntl.flock(file_handler, fcntl.LOCK_UN)  # 解
+        logger.info("Release lock successfully.")
