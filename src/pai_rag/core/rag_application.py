@@ -22,6 +22,7 @@ from llama_index.core.schema import ImageNode
 from loguru import logger
 from enum import Enum
 
+from pai_rag.trace.pai.pai_instrumentor import init_opentelemetry
 from pai_rag.utils.messages_utils import parse_chat_messages_v2
 
 DEFAULT_RAG_INDEX_FILE = "localdata/default_rag_indexes.json"
@@ -41,6 +42,11 @@ class PaiApp:
         self.chat_flow = ChatFlow()
         vector_index = resolve_vector_index(knowledgebase_manager.get_knowledgebase())
         _ = resolve_query_engine(self.config, vector_index=vector_index)
+        if self.config.trace.is_enabled():
+            init_opentelemetry(
+                self.config.trace
+            )
+
 
     def refresh(self, config: RagConfig):
         self.config = config
