@@ -93,3 +93,8 @@ source = "bing"
 
 [rag.synthesizer]
 type = "SimpleSummarize"
+
+[rag.trace]
+token = "xxxx"
+endpoint = "http://tracing-analysis-dc-hz.aliyuncs.com:8090'"
+service_name = "feiyue_test_0321"
